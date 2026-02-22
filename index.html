@@ -3,32 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moje TV</title>
+    <title>Moje TV - Nova Sport Complete</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.min.css">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: sans-serif; overflow: hidden; }
+        
+        /* Horní lišta s posuvníkem pro více kanálů */
         #menu { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 60px; 
+            position: absolute; top: 0; left: 0; width: 100%; height: 65px; 
             background: rgba(0,0,0,0.9); z-index: 10; display: flex; align-items: center; 
-            padding: 0 15px; border-bottom: 1px solid #333;
+            padding: 0 10px; border-bottom: 1px solid #333;
+            overflow-x: auto; /* Umožní posun tlačítek doleva/doprava */
+            scrollbar-width: none; /* Skryje scrollbar pro Firefox */
         }
+        #menu::-webkit-scrollbar { display: none; } /* Skryje scrollbar pro Chrome/Safari */
+        
         .channel-btn {
-            background: #222; color: white; border: 1px solid #444; padding: 10px 18px;
-            margin-right: 10px; cursor: pointer; border-radius: 5px; font-weight: bold; transition: 0.3s;
+            background: #222; color: white; border: 1px solid #444; padding: 10px 15px;
+            margin-right: 8px; cursor: pointer; border-radius: 5px; font-weight: bold; 
+            white-space: nowrap; transition: 0.2s; font-size: 14px;
         }
+        
         .channel-btn:hover { background: #333; }
         .channel-btn.active { background: #e50914; border-color: #e50914; }
-        #video-container { width: 100%; height: calc(100% - 60px); margin-top: 60px; }
+
+        #video-container { width: 100%; height: calc(100% - 65px); margin-top: 65px; }
         video { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
 
     <div id="menu">
-        <button class="channel-btn active" onclick="changeChannel('ns1', this)">Nova Sport 1 (Antik)</button>
-        <button class="channel-btn" onclick="changeChannel('ns2_antik', this)">Nova Sport 2 (Antik)</button>
-        <button class="channel-btn" onclick="changeChannel('ns2_strumyk', this)">Nova Sport 2 (Záloha)</button>
+        <button class="channel-btn active" onclick="changeChannel('ns1', this)">Nova Sport 1</button>
+        <button class="channel-btn" onclick="changeChannel('ns2', this)">Nova Sport 2</button>
+        <button class="channel-btn" onclick="changeChannel('ns3', this)">Nova Sport 3</button>
+        <button class="channel-btn" onclick="changeChannel('ns4', this)">Nova Sport 4</button>
+        <button class="channel-btn" onclick="changeChannel('ns5', this)">Nova Sport 5</button>
+        <button class="channel-btn" onclick="changeChannel('ns6', this)">Nova Sport 6</button>
+        <button class="channel-btn" onclick="changeChannel('ns2_zaloha', this)">NS 2 (Záloha)</button>
     </div>
 
     <div id="video-container" data-shaka-player-container>
@@ -36,12 +49,18 @@
     </div>
 
     <script>
+        // Databáze všech streamů
         const streams = {
             'ns1': 'https://dash4.antik.sk/stream/nvidia_nova_sport1/playlist_cbcs.mpd',
-            'ns2_antik': 'https://dash4.antik.sk/stream/nvidia_nova_sport2/playlist_cbcs.mpd',
-            'ns2_strumyk': 'https://45d4f5xxx.win/strumyk/hls/event27/index.m3u8?jwt=MTQ5LjEwMi4yMzUuMTc2fDE3NzE3MzExNzd8ZXZlbnQyNy5tM3U4fDF4TXZTQzdQTWVpYlBzRFU3REo0ZlFDb0k5Nng0TzNIUVUyOEF1SzhhTE0'
+            'ns2': 'https://dash4.antik.sk/stream/nvidia_nova_sport2/playlist_cbcs.mpd',
+            'ns3': 'https://dash4.antik.sk/stream/nvidia_nova_sport3/playlist_cbcs.mpd',
+            'ns4': 'https://dash4.antik.sk/stream/nvidia_nova_sport4/playlist_cbcs.mpd',
+            'ns5': 'https://dash4.antik.sk/stream/nvidia_nova_sport5/playlist_cbcs.mpd',
+            'ns6': 'https://dash4.antik.sk/stream/nvidia_nova_sport6/playlist_cbcs.mpd',
+            'ns2_zaloha': 'https://45d4f5xxx.win/strumyk/hls/event27/index.m3u8?jwt=MTQ5LjEwMi4yMzUuMTc2fDE3NzE3MzExNzd8ZXZlbnQyNy5tM3U4fDF4TXZTQzdQTWVpYlBzRFU3REo0ZlFDb0k5Nng0TzNIUVUyOEF1SzhhTE0'
         };
 
+        // Společné klíče pro Antik
         const clearKeys = {
             "11223344556677889900112233445566": "4b80724d0ef86bcb2c21f7999d67739d"
         };
@@ -53,34 +72,35 @@
             const ui = video['ui'];
             player = ui.getControls().getPlayer();
 
+            // Základní nastavení klíčů
             player.configure({ drm: { clearKeys: clearKeys } });
 
             try {
                 await player.load(streams['ns1']);
-            } catch (e) { console.error('Chyba:', e); }
+            } catch (e) { console.error('Chyba při startu:', e); }
         }
 
         async function changeChannel(id, btn) {
+            // Vizualizace tlačítek
             document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
             try {
-                // Přepínání DRM podle zdroje
-                if (id === 'ns2_strumyk') {
-                    // Strumyk (HLS) nepotřebuje klíče
+                // Přepínání DRM podle zdroje (Záloha klíče nepotřebuje)
+                if (id === 'ns2_zaloha') {
                     player.configure({ drm: { clearKeys: {} } });
                 } else {
-                    // Antik potřebuje klíče
                     player.configure({ drm: { clearKeys: clearKeys } });
                 }
 
                 await player.load(streams[id]);
             } catch (e) {
-                console.error('Chyba při přepínání:', e);
-                alert('Tento zdroj nefunguje (pravděpodobně vypršel token nebo je blokován).');
+                console.error('Chyba přepnutí:', e);
+                alert('Kanál nelze načíst (možná vypršela platnost nebo je offline).');
             }
         }
 
+        // Blokace pravého kliku pro čistší vzhled
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('shaka-ui-loaded', initPlayer);
     </script>
