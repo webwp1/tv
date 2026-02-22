@@ -1,32 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Nova Sport HD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje Online TV</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.min.css">
+    
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
-        #video-container { width: 100%; height: 100%; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #111; font-family: sans-serif; overflow: hidden; }
+        
+        /* Horní menu s kanály */
+        #menu { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 50px; 
+            background: rgba(0,0,0,0.8); z-index: 10; display: flex; align-items: center; padding: 0 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .channel-btn {
+            background: #222; color: white; border: 1px solid #444; padding: 8px 15px;
+            margin-right: 10px; cursor: pointer; border-radius: 4px; transition: 0.3s;
+        }
+        
+        .channel-btn:hover { background: #444; }
+        .channel-btn.active { background: red; border-color: red; }
+
+        /* Kontejner pro video */
+        #video-container { width: 100%; height: calc(100% - 50px); margin-top: 50px; }
+        video { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
+
+    <div id="menu">
+        <button class="channel-btn active" onclick="changeChannel('ns1', this)">Nova Sport 1</button>
+        <button class="channel-btn" onclick="changeChannel('ns2', this)">Nova Sport 2</button>
+        </div>
+
     <div id="video-container" data-shaka-player-container>
-        <video autoplay data-shaka-player id="video" style="width:100%;height:100%;"></video>
+        <video autoplay data-shaka-player id="video"></video>
     </div>
+
     <script>
-        async function init() {
+        const streams = {
+            'ns1': 'https://dash4.antik.sk/stream/nvidia_nova_sport1/playlist_cbcs.mpd',
+            'ns2': 'https://45d4f5xxx.win/strumyk/hls/event27/index.m3u8?jwt=MTQ5LjEwMi4yMzUuMTc2fDE3NzE3MzExNzd8ZXZlbnQyNy5tM3U4fDF4TXZTQzdQTWVpYlBzRFU3REo0ZlFDb0k5Nng0TzNIUVUyOEF1SzhhTE0'
+        };
+
+        const keys = {
+            "11223344556677889900112233445566": "4b80724d0ef86bcb2c21f7999d67739d"
+        };
+
+        let player;
+
+        async function initPlayer() {
             const video = document.getElementById('video');
             const ui = video['ui'];
-            const player = ui.getControls().getPlayer();
+            player = ui.getControls().getPlayer();
+
             player.configure({
-                drm: { clearKeys: { "11223344556677889900112233445566": "4b80724d0ef86bcb2c21f7999d67739d" } }
+                drm: { clearKeys: keys }
             });
+
             try {
-                await player.load('https://dash4.antik.sk/stream/nvidia_nova_sport1/playlist_cbcs.mpd');
+                await player.load(streams['ns1']);
             } catch (e) { console.error(e); }
         }
-        document.addEventListener('shaka-ui-loaded', init);
+
+        async function changeChannel(id, btn) {
+            // Změna aktivního tlačítka
+            document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Načtení nového streamu
+            try {
+                await player.load(streams[id]);
+            } catch (e) { alert('Chyba při přepínání kanálu.'); }
+        }
+
+        document.addEventListener('shaka-ui-loaded', initPlayer);
+        document.addEventListener('contextmenu', e => e.preventDefault());
     </script>
 </body>
 </html>
